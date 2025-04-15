@@ -1,0 +1,8 @@
+numpy==1.26.0
+PyQt5
+openvino
+openvino-whisper
+ffmpeg-python
+pydub
+scipy
+sounddevice
