@@ -1,0 +1,24 @@
+
+{
+"model": {
+    "default": "tiny",
+    "path": "./models/",
+    "available": ["tiny", "tiny.en", "base"]
+},
+"audio": {
+    "mic_device_index": 0,
+    "sample_rate": 16000,
+    "silence_threshold": 0.03,
+    "silence_duration": 1.5,
+    "temp_dir": "./temp/"
+},
+"ui": {
+    "theme": "light",
+    "font_size": 12,
+    "max_display_items": 100
+},
+"files": {
+    "output_dir": "./output/",
+    "supported_formats": ["mp3", "wav", "m4a", "txt"]
+}
+}
