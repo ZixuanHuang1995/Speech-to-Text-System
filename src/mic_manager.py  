@@ -1,6 +1,5 @@
 def startRecording(deviceIndex):
     import pyaudio
-    import wave
 
     # Set up PyAudio
     audio = pyaudio.PyAudio()
@@ -62,3 +61,5 @@ def processAudioChunk(chunk):
     """
     # Example processing: Just return the chunk as is
     return chunk
+
+startRecording(0)
