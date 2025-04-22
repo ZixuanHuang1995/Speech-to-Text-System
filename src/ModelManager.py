@@ -10,12 +10,11 @@ class ModelManager:
     
     @staticmethod
     def get_model_list() -> list:
-        print("Get model list ...")
         whisper_models = ['tiny.en', 'tiny', 'base']
         openvino_whisper_models = [
             "OpenVINO/whisper-tiny-fp16-ov",
             "OpenVINO/whisper-base-fp16-ov",
-            "OpenVINO/distil-large-v3-int8-ov",
+            "OpenVINO/whisper-large-v3-int8-ov",
         ]
         return whisper_models + openvino_whisper_models
     

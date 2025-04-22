@@ -1,6 +1,7 @@
 from PySide6 import QtCore, QtWidgets
 
 from src.ModelManager import ModelManager
+from src.AudioProcessor import AudioProcessor
 
 class MyWidget(QtWidgets.QWidget):
     
@@ -14,10 +15,12 @@ class MyWidget(QtWidgets.QWidget):
         self.create_menu()
         self.create_horizontal_group_box()
         self.create_grid_group_box()
-        self.textOutputs = QtWidgets.QLabel("Output Text Box",
+        self.textOutputs = QtWidgets.QPlainTextEdit("Output Text Box")
+        self.textOutputs.setReadOnly(True)
+        self.textStatus = QtWidgets.QLineEdit("Status Bar",
                                      alignment=QtCore.Qt.AlignCenter)
-        self.textStatus = QtWidgets.QLabel("Status Bar",
-                                     alignment=QtCore.Qt.AlignCenter)
+        self.textStatus.setReadOnly(True)
+        # self.textStatus.setStyleSheet("background-color: lightgray;")
 
         main_layout = QtWidgets.QVBoxLayout()
         main_layout.setMenuBar(self._menu_bar)
@@ -41,15 +44,16 @@ class MyWidget(QtWidgets.QWidget):
         layout = QtWidgets.QHBoxLayout()
         
         model_manager = ModelManager()
-        model_list = model_manager.get_model_list()
-        buttonModelOption = QtWidgets.QComboBox()
-        buttonModelOption.addItems(model_list)
-        print("Model list: ", model_list, "done")
+        self.model_list = model_manager.get_model_list()
+        self.buttonModelOption = QtWidgets.QComboBox()
+        self.buttonModelOption.addItems(self.model_list)
         # buttonModelOption.setMaximumWidth(300)
-        layout.addWidget(buttonModelOption)
+        layout.addWidget(self.buttonModelOption)
         
         buttonSelectFile = QtWidgets.QPushButton("Select File")
+        buttonSelectFile.clicked.connect(self.select_file)
         layout.addWidget(buttonSelectFile)
+        
         
         buttonMicrophone = QtWidgets.QPushButton("Microphone On/Off")
         layout.addWidget(buttonMicrophone)
@@ -70,6 +74,7 @@ class MyWidget(QtWidgets.QWidget):
         layout.addWidget(buttonSaveOutputs, 1, 1)
 
         buttonDownload = QtWidgets.QPushButton("Download Models")
+        buttonDownload.clicked.connect(self.download_model)
         layout.addWidget(buttonDownload, 2, 1)
 
         layout.setColumnStretch(1, 20)
@@ -83,5 +88,20 @@ class MyWidget(QtWidgets.QWidget):
     
     @QtCore.Slot()
     def select_file(self):
-        import os
+        file_path , filterType = QtWidgets.QFileDialog.getOpenFileName(filter='(*.mp3 *.wav *.flac *.ogg *.m4a)')
+        self.textStatus.setText("Selected file: " + file_path + " " + filterType)
+        
+        import time
+        time.sleep(1)
+        self.textStatus.setText("Trascription in progress...")
+
+        self.model_name = self.buttonModelOption.currentText()
+        audio_processor = AudioProcessor()
+        audio_data = audio_processor.preprocess_audio(file_path)
+        start_time = time.time()
+        trascription = audio_processor.transcribeAudio(audio_data, self.model_name)
+        end_time = time.time()
+        print(trascription)
+        self.textOutputs.setPlainText(trascription)
+        self.textStatus.setText("Trascription completed.   " + "Time: " + str(end_time - start_time) + "s   " + "Model: " + self.model_name)
         
