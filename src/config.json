@@ -1,9 +1,9 @@
 
 {
 "model": {
-    "default": "tiny",
+    "default": "tiny.en",
     "path": "./models/",
-    "available": ["tiny", "tiny.en", "base"]
+    "available": ["tiny.en", "tiny", "base"]
 },
 "audio": {
     "mic_device_index": 0,

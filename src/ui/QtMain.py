@@ -1,13 +1,18 @@
-from PySide6 import QtCore, QtWidgets
+# from src import config
+import sys
+from PySide6 import QtCore, QtWidgets, QtMultimedia
 
 from src.ModelManager import ModelManager
 from src.AudioProcessor import AudioProcessor
+from src.RecordingManager import RecordingManager
 
 class MyWidget(QtWidgets.QWidget):
     
-    model_name = None
+    # model_name = config["model"]["default"]
+    model_name = 'tiny'
     model_list = None
     model_manager = None
+    recording = False
 
     def __init__(self):
         super().__init__()
@@ -56,6 +61,7 @@ class MyWidget(QtWidgets.QWidget):
         
         
         buttonMicrophone = QtWidgets.QPushButton("Microphone On/Off")
+        buttonMicrophone.clicked.connect(self.record_to_transcribe)
         layout.addWidget(buttonMicrophone)
 
         self._horizontal_group_box.setLayout(layout)
@@ -71,11 +77,11 @@ class MyWidget(QtWidgets.QWidget):
         layout.addWidget(checkboxDetection, 2, 0)
         
         buttonSaveOutputs = QtWidgets.QPushButton("Save File")
-        layout.addWidget(buttonSaveOutputs, 1, 1)
+        layout.addWidget(buttonSaveOutputs, 1, 3)
 
         buttonDownload = QtWidgets.QPushButton("Download Models")
         buttonDownload.clicked.connect(self.download_model)
-        layout.addWidget(buttonDownload, 2, 1)
+        layout.addWidget(buttonDownload, 2, 3)
 
         layout.setColumnStretch(1, 20)
         layout.setColumnStretch(2, 10)
@@ -84,24 +90,59 @@ class MyWidget(QtWidgets.QWidget):
     @QtCore.Slot()
     def download_model(self):
         model_manager = ModelManager()
-        model_manager.download_model(self.model_list)
+        try:
+            model_manager.download_model(self.model_list)
+            QtWidgets.QMessageBox.warning(None, "Warning", "Models downloaded successfully")
+            self.textStatus.setText("All models downloaded successfully.")
+        except Exception as e: 
+            self.textStatus.setText(f"Error downloading models: {e}")
+
     
     @QtCore.Slot()
     def select_file(self):
-        file_path , filterType = QtWidgets.QFileDialog.getOpenFileName(filter='(*.mp3 *.wav *.flac *.ogg *.m4a)')
-        self.textStatus.setText("Selected file: " + file_path + " " + filterType)
+        file_path = None
+        try:
+            file_path , filterType = QtWidgets.QFileDialog.getOpenFileName(filter='(*.mp3 *.wav *.flac *.ogg *.m4a)')
+            self.textStatus.setText("Selected file: " + file_path + " " + filterType)
+        except Exception as e:
+            self.textStatus.setText(f"Error: {e}")
+            QtWidgets.QMessageBox.warning(None, "Warning", "Please select a valid audio file.")
+            self.textOutputs.setPlainText("")
         
-        import time
-        time.sleep(1)
-        self.textStatus.setText("Trascription in progress...")
+        if file_path:
+            self.textStatus.setText("Trascription in progress...")
+            import time
+            self.model_name = self.buttonModelOption.currentText()
+            audio_processor = AudioProcessor()
+            audio_data = audio_processor.preprocess_audio(file_path)
+            start_time = time.time()
+            trascription = audio_processor.transcribe_audio(audio_data, self.model_name)
+            end_time = time.time()
+            print(trascription)
+            self.textOutputs.setPlainText(trascription)
+            self.textStatus.setText("Trascription completed.   " + "Time: " + str(end_time - start_time) + "s   " + "Model: " + self.model_name)
+        else:   
+            self.textStatus.setText("Please select a valid audio file.")
+            self.textOutputs.setPlainText("")
 
-        self.model_name = self.buttonModelOption.currentText()
-        audio_processor = AudioProcessor()
-        audio_data = audio_processor.preprocess_audio(file_path)
-        start_time = time.time()
-        trascription = audio_processor.transcribeAudio(audio_data, self.model_name)
-        end_time = time.time()
-        print(trascription)
-        self.textOutputs.setPlainText(trascription)
-        self.textStatus.setText("Trascription completed.   " + "Time: " + str(end_time - start_time) + "s   " + "Model: " + self.model_name)
+    @QtCore.Slot()
+    def record_to_transcribe(self):
+        recording_manager = RecordingManager()
+        input_devices = recording_manager.get_input_devices()
+        if not input_devices:
+            QtWidgets.QMessageBox.warning(None, "audio", "There is no audio input device available.")
+            sys.exit(-1)
+        input_device = input_devices[1]
         
+        self.recording = not self.recording
+        if self.recording:
+            self.textStatus.setText("Recording...")
+            recording_manager.start_recording(input_device, self.model_name)
+            recording_manager.transcription_updated.connect(self.append_transcription)
+        else:
+            recording_manager.stop_recording()
+            self.textStatus.setText("Recording stopped.")
+    
+    def append_transcription(self, text):
+        self.textStatus.append(text) 
+    

@@ -14,7 +14,8 @@ class ModelManager:
         openvino_whisper_models = [
             "OpenVINO/whisper-tiny-fp16-ov",
             "OpenVINO/whisper-base-fp16-ov",
-            "OpenVINO/whisper-large-v3-int8-ov",
+            "OpenVINO/whisper-large-v3-int4-ov",
+            "OpenVINO/whisper-large-v3-fp16-ov"
         ]
         return whisper_models + openvino_whisper_models
     
@@ -26,18 +27,19 @@ class ModelManager:
         for model_name in model_list:
             print("=====" + model_name + "=====")
             if not self.is_model_available(str(model_name)):
+                model_path = "models/" + model_name
                 if model_name.startswith("OpenVINO/"):
                     print(f"Download OpenVINO Whisper Model：{model_name} ...")
-                    model_id = model_name # "OpenVINO/whisper-tiny-fp16-ov"
-                    model_path = "models/" + model_name
+                    model_id = model_name
                     hf_hub.snapshot_download(model_id, local_dir=model_path)
                 else:
                     print(f"Download Whisper Model：{model_name} ...")
                     from whisper import _download, _MODELS
                     _download(_MODELS[model_name], "models/", False)
+                print(f"Model {model_name} downloaded and saved to {model_path}")
             else:
                 print(f"{model_name} already exists in the local directory.")
-        print(f"Model {model_id} downloaded and saved to {model_path}")
+        
 
     def load_model(self, model_name):
         model_path = "models/" + model_name
