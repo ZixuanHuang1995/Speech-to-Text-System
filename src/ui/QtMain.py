@@ -52,8 +52,11 @@ class MyWidget(QtWidgets.QWidget):
         self.model_list = model_manager.get_model_list()
         self.buttonModelOption = QtWidgets.QComboBox()
         self.buttonModelOption.addItems(self.model_list)
-        # buttonModelOption.setMaximumWidth(300)
         layout.addWidget(self.buttonModelOption)
+
+        self.buttonLanguageOption = QtWidgets.QComboBox()
+        self.buttonLanguageOption.addItems(['zh', 'en', 'ja', 'ko'])
+        layout.addWidget(self.buttonLanguageOption) 
         
         buttonSelectFile = QtWidgets.QPushButton("Select File")
         buttonSelectFile.clicked.connect(self.select_file)
@@ -113,10 +116,11 @@ class MyWidget(QtWidgets.QWidget):
             self.textStatus.setText("Trascription in progress...")
             import time
             self.model_name = self.buttonModelOption.currentText()
+            self.language = self.buttonLanguageOption.currentText()
             audio_processor = AudioProcessor()
             audio_data = audio_processor.preprocess_audio(file_path)
             start_time = time.time()
-            trascription = audio_processor.transcribe_audio(audio_data, self.model_name)
+            trascription = audio_processor.transcribe_audio(audio_data, self.model_name, self.language)
             end_time = time.time()
             print(trascription)
             self.textOutputs.setPlainText(trascription)
@@ -127,6 +131,7 @@ class MyWidget(QtWidgets.QWidget):
 
     @QtCore.Slot()
     def record_to_transcribe(self):
+        self.model_name = self.buttonModelOption.currentText()
         recording_manager = RecordingManager()
         input_devices = recording_manager.get_input_devices()
         if not input_devices:
@@ -144,5 +149,5 @@ class MyWidget(QtWidgets.QWidget):
             self.textStatus.setText("Recording stopped.")
     
     def append_transcription(self, text):
-        self.textStatus.append(text) 
+        self.textStatus.append('text') 
     

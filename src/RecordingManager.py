@@ -1,16 +1,19 @@
 from src.AudioProcessor import AudioProcessor
-from PySide6.QtCore import Signal
+from PySide6.QtCore import QObject, Signal
+import threading
+import numpy as np
 
-class RecordingManager:
+class RecordingManager(QObject):
     transcription_updated = Signal(str)
     
     def __init__(self):
+        super().__init__()
         self.trascription = ''
+        self.record_thread = None
+        self.frames = []
 
     def start_recording(self, input_device, model_name):
         import pyaudio
-        import threading
-
         audio_processor = AudioProcessor()
 
         self.input_device = input_device
@@ -27,7 +30,13 @@ class RecordingManager:
         def record():
             while self.recording:
                 data = self.stream.read(1024)
-                self.trascription = audio_processor.transcribe_audio(data, model_name)
+                self.frames.append(data)
+                if len(self.frames) > 0:
+                    audio_bytes = b''.join(self.frames)
+                    audio_np = np.frombuffer(audio_bytes, dtype=np.int16).astype(np.float32)
+                    audio_data = audio_processor.preprocess_audio(audio_np)
+                    self.trascription = audio_processor.transcribe_audio(audio_data, model_name)
+                    self.frames = []
                 self.transcription_updated.emit(self.trascription)
 
         self.record_thread = threading.Thread(target=record)
