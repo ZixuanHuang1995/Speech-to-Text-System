@@ -8,8 +8,8 @@ from src.RecordingManager import RecordingManager
 
 class MyWidget(QtWidgets.QWidget):
     
-    # model_name = config["model"]["default"]
-    model_name = 'tiny'
+    model_name = None
+    language = None
     model_list = None
     model_manager = None
     recording = False
@@ -73,13 +73,14 @@ class MyWidget(QtWidgets.QWidget):
         self._grid_group_box = QtWidgets.QGroupBox("Advanced Controls")
         layout = QtWidgets.QGridLayout()
 
-        checkboxAuto = QtWidgets.QCheckBox("Auto")
-        layout.addWidget(checkboxAuto, 1, 0)
+        self.checkboxAuto = QtWidgets.QCheckBox("Auto Scroll")
+        layout.addWidget(self.checkboxAuto, 1, 0)
 
         checkboxDetection = QtWidgets.QCheckBox("Detection")
         layout.addWidget(checkboxDetection, 2, 0)
         
         buttonSaveOutputs = QtWidgets.QPushButton("Save File")
+        buttonSaveOutputs.clicked.connect(self.save_file)
         layout.addWidget(buttonSaveOutputs, 1, 3)
 
         buttonDownload = QtWidgets.QPushButton("Download Models")
@@ -99,7 +100,15 @@ class MyWidget(QtWidgets.QWidget):
             self.textStatus.setText("All models downloaded successfully.")
         except Exception as e: 
             self.textStatus.setText(f"Error downloading models: {e}")
-
+    
+    @QtCore.Slot()
+    def save_file(self):
+        self.model_name = self.buttonModelOption.currentText()
+        self.language = self.buttonLanguageOption.currentText()
+        with open('output/output.txt', 'w') as output_file:
+            output_file.write(str(self.textOutputs.toPlainText()))
+            output_file.write("\n\n" + "Meta data: " + "model_name:" + str(self.model_name) + " language:" + str(self.language) + " timstamp:" + str(QtCore.QDateTime.currentDateTime().toString()))
+        self.textStatus.setText("File saved successfully.")
     
     @QtCore.Slot()
     def select_file(self):
@@ -119,9 +128,16 @@ class MyWidget(QtWidgets.QWidget):
             self.language = self.buttonLanguageOption.currentText()
             audio_processor = AudioProcessor()
             audio_data = audio_processor.preprocess_audio(file_path)
-            start_time = time.time()
-            trascription = audio_processor.transcribe_audio(audio_data, self.model_name, self.language)
-            end_time = time.time()
+            try:
+                start_time = time.time()
+                trascription = audio_processor.transcribe_audio(audio_data, self.model_name, self.language)
+                end_time = time.time()
+            except Exception as e:
+                self.textStatus.setText(f"Error: {e}")
+                QtWidgets.QMessageBox.warning(None, "Warning", "Please select a valid audio file.")
+                self.textOutputs.setPlainText("")
+                return
+
             print(trascription)
             self.textOutputs.setPlainText(trascription)
             self.textStatus.setText("Trascription completed.   " + "Time: " + str(end_time - start_time) + "s   " + "Model: " + self.model_name)
@@ -150,4 +166,12 @@ class MyWidget(QtWidgets.QWidget):
     
     def append_transcription(self, text):
         self.textStatus.append('text') 
+
+    def add_text(self, text):
+        self.textOutputs.appendPlainText(text)
+        self.textOutputs.moveCursor(QtWidgets.QTextCursor.End)
+        self.textOutputs.ensureCursorVisible()
+
+        if self.checkboxAuto.isChecked():
+            self.textOutputs.verticalScrollBar().setValue(self.textOutputs.verticalScrollBar().maximum())
     

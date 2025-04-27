@@ -36,8 +36,8 @@ class RecordingManager(QObject):
                     audio_np = np.frombuffer(audio_bytes, dtype=np.int16).astype(np.float32)
                     audio_data = audio_processor.preprocess_audio(audio_np)
                     self.trascription = audio_processor.transcribe_audio(audio_data, model_name)
-                    self.frames = []
-                self.transcription_updated.emit(self.trascription)
+                    self.frames = [] # Clear frames after processing
+                self.transcription_updated.emit(self.trascription) 
 
         self.record_thread = threading.Thread(target=record)
         self.record_thread.start()
