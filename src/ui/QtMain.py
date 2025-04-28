@@ -1,6 +1,7 @@
-# from src import config
-import sys
 from PySide6 import QtCore, QtWidgets, QtMultimedia
+from PySide6.QtGui import QTextCursor
+from datetime import datetime
+
 
 from src.ModelManager import ModelManager
 from src.AudioProcessor import AudioProcessor
@@ -13,6 +14,7 @@ class MyWidget(QtWidgets.QWidget):
     model_list = None
     model_manager = None
     recording = False
+    recording_manager = None
 
     def __init__(self):
         super().__init__()
@@ -20,7 +22,7 @@ class MyWidget(QtWidgets.QWidget):
         self.create_menu()
         self.create_horizontal_group_box()
         self.create_grid_group_box()
-        self.textOutputs = QtWidgets.QPlainTextEdit("Output Text Box")
+        self.textOutputs = QtWidgets.QPlainTextEdit("")
         self.textOutputs.setReadOnly(True)
         self.textStatus = QtWidgets.QLineEdit("Status Bar",
                                      alignment=QtCore.Qt.AlignCenter)
@@ -36,6 +38,7 @@ class MyWidget(QtWidgets.QWidget):
         self.setLayout(main_layout)
 
         self.setWindowTitle("Qt Main Window")
+        self.recording_manager = RecordingManager()
 
     def create_menu(self):
         self._menu_bar = QtWidgets.QMenuBar()
@@ -67,6 +70,10 @@ class MyWidget(QtWidgets.QWidget):
         buttonMicrophone.clicked.connect(self.record_to_transcribe)
         layout.addWidget(buttonMicrophone)
 
+        buttonClear = QtWidgets.QPushButton("Clear")
+        buttonClear.clicked.connect(self.clear)
+        layout.addWidget(buttonClear)
+
         self._horizontal_group_box.setLayout(layout)
     
     def create_grid_group_box(self):
@@ -76,8 +83,8 @@ class MyWidget(QtWidgets.QWidget):
         self.checkboxAuto = QtWidgets.QCheckBox("Auto Scroll")
         layout.addWidget(self.checkboxAuto, 1, 0)
 
-        checkboxDetection = QtWidgets.QCheckBox("Detection")
-        layout.addWidget(checkboxDetection, 2, 0)
+        self.checkboxDetection = QtWidgets.QCheckBox("Detection")
+        layout.addWidget(self.checkboxDetection, 2, 0)
         
         buttonSaveOutputs = QtWidgets.QPushButton("Save File")
         buttonSaveOutputs.clicked.connect(self.save_file)
@@ -90,6 +97,10 @@ class MyWidget(QtWidgets.QWidget):
         layout.setColumnStretch(1, 20)
         layout.setColumnStretch(2, 10)
         self._grid_group_box.setLayout(layout)
+    
+    @QtCore.Slot()
+    def clear(self):
+        self.textOutputs.setPlainText("")
     
     @QtCore.Slot()
     def download_model(self):
@@ -126,11 +137,12 @@ class MyWidget(QtWidgets.QWidget):
             import time
             self.model_name = self.buttonModelOption.currentText()
             self.language = self.buttonLanguageOption.currentText()
-            audio_processor = AudioProcessor()
+            audio_processor = AudioProcessor(self.model_name, self.language)
             audio_data = audio_processor.preprocess_audio(file_path)
             try:
+                QtWidgets.QMessageBox.warning(None, "Warning", "Trascription is processing... Please wait...")
                 start_time = time.time()
-                trascription = audio_processor.transcribe_audio(audio_data, self.model_name, self.language)
+                trascription = audio_processor.transcribe_audio(audio_data)
                 end_time = time.time()
             except Exception as e:
                 self.textStatus.setText(f"Error: {e}")
@@ -147,31 +159,59 @@ class MyWidget(QtWidgets.QWidget):
 
     @QtCore.Slot()
     def record_to_transcribe(self):
-        self.model_name = self.buttonModelOption.currentText()
-        recording_manager = RecordingManager()
-        input_devices = recording_manager.get_input_devices()
-        if not input_devices:
-            QtWidgets.QMessageBox.warning(None, "audio", "There is no audio input device available.")
-            sys.exit(-1)
-        input_device = input_devices[1]
-        
-        self.recording = not self.recording
-        if self.recording:
-            self.textStatus.setText("Recording...")
-            recording_manager.start_recording(input_device, self.model_name)
-            recording_manager.transcription_updated.connect(self.append_transcription)
-        else:
-            recording_manager.stop_recording()
-            self.textStatus.setText("Recording stopped.")
-    
-    def append_transcription(self, text):
-        self.textStatus.append('text') 
 
-    def add_text(self, text):
-        self.textOutputs.appendPlainText(text)
-        self.textOutputs.moveCursor(QtWidgets.QTextCursor.End)
-        self.textOutputs.ensureCursorVisible()
+        self.recording = not self.recording
+
+        if self.recording:
+            self.model_name = self.buttonModelOption.currentText()
+            self.language = self.buttonLanguageOption.currentText()
+            self.input_device_info = None
+            
+            from PySide6.QtWidgets import QInputDialog, QMessageBox
+            from PySide6.QtMultimedia import QMediaDevices  
+            devices = QMediaDevices.audioInputs()
+            device_names = [device.description() for device in devices]
+            if not device_names:
+                QMessageBox.warning(self, "No Devices Detected")
+
+            item, ok = QInputDialog.getItem(
+                self, 
+                "Selection", 
+                "Please select an audio recording input: ", 
+                device_names, 
+                editable=False
+            )
+
+            if ok and item:
+                device_info = self.recording_manager.get_pyaudio_device_info(item)
+                if device_info:
+                    QMessageBox.information(self, "Selected", f"Selected Input Device: \n{item}")
+                    print(f"User selected input device:{item}")
+                    self.input_device_info = device_info
+                else:
+                    QMessageBox.warning(self, "Failed", "No corresponding PyAudio device found")
+            else:
+                QMessageBox.information(self, "Canceled")
+
+            input_device = self.input_device_info
+            if self.checkboxDetection.isChecked():
+                silence_timeout = 10
+            else:
+                silence_timeout = 10000
+            try:
+                self.textStatus.setText("Recording...")
+                self.recording_manager.start_recording(input_device, self.model_name, self.language, record_seconds=3, silence_timeout=silence_timeout)
+                self.recording_manager.transcription_updated.connect(self.append_transcription)
+            except Exception as e:
+                QMessageBox.critical(self, "Recording Failed", str(e))
+        else:
+            self.recording_manager.stop_recording()
+            self.textStatus.setText("Recording stopped.")
+
+    def append_transcription(self, text):
+        timestamp = datetime.now().strftime('%H:%M:%S')
+        self.textOutputs.appendPlainText(f"[{timestamp}] {text}")
 
         if self.checkboxAuto.isChecked():
-            self.textOutputs.verticalScrollBar().setValue(self.textOutputs.verticalScrollBar().maximum())
-    
+            self.textOutputs.moveCursor(QTextCursor.End)
+            self.textOutputs.ensureCursorVisible()

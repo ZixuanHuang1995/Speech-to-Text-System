@@ -2,6 +2,7 @@ from src.AudioProcessor import AudioProcessor
 from PySide6.QtCore import QObject, Signal
 import threading
 import numpy as np
+import time
 
 class RecordingManager(QObject):
     transcription_updated = Signal(str)
@@ -9,53 +10,82 @@ class RecordingManager(QObject):
     def __init__(self):
         super().__init__()
         self.trascription = ''
+        self.is_recording = False
         self.record_thread = None
-        self.frames = []
+    
+    def __is_silence(self, data, threshold=0.01):
+        audio_chunk = np.frombuffer(data, dtype=np.int16).astype(np.float32) / 32768.0  # normalization [-1.0, +1.0]
+        rms = np.sqrt(np.mean(np.square(audio_chunk))) # calculate the RMS value of the volume
+        return rms < threshold
 
-    def start_recording(self, input_device, model_name):
+    def start_recording(self, input_device, model_name, language, record_seconds=3, silence_timeout=10000):
         import pyaudio
-        audio_processor = AudioProcessor()
+        audio_processor = AudioProcessor(model_name, language)
+        self.last_spoke_time = time.time()
+        silence_timeout = silence_timeout
 
         self.input_device = input_device
-        self.recording = True
+        self.is_recording = True
 
         self.audio = pyaudio.PyAudio()
+        channels = int(input_device['maxInputChannels'])
+        self.rate = int(input_device['defaultSampleRate'])
+        index = int(input_device['index'])
+        self.frames_per_buffer = 1024
+        self.record_seconds = record_seconds
         self.stream = self.audio.open(format=pyaudio.paInt16,
-                                      channels=1,
-                                      rate=16000,
+                                      channels=channels,
+                                      rate=self.rate,
                                       input=True,
-                                      input_device_index = 1,
-                                      frames_per_buffer=1024)
+                                      input_device_index = index,
+                                      frames_per_buffer=self.frames_per_buffer)
+        
 
         def record():
-            while self.recording:
-                data = self.stream.read(1024)
-                self.frames.append(data)
-                if len(self.frames) > 0:
-                    audio_bytes = b''.join(self.frames)
-                    audio_np = np.frombuffer(audio_bytes, dtype=np.int16).astype(np.float32)
-                    audio_data = audio_processor.preprocess_audio(audio_np)
-                    self.trascription = audio_processor.transcribe_audio(audio_data, model_name)
-                    self.frames = [] # Clear frames after processing
+            while self.is_recording:
+                frames = []
+                num_frames = int(self.rate / self.frames_per_buffer * self.record_seconds)
+
+                for _ in range(num_frames):
+                    data = self.stream.read(self.frames_per_buffer, exception_on_overflow=False)
+
+                    if not self.__is_silence(data):
+                        self.last_spoke_time = time.time()
+
+                    frames.append(np.frombuffer(data, dtype=np.int16))
+
+                audio_np = np.concatenate(frames).astype(np.float32) / 32768.0  # normalization [-1.0, +1.0] 
+                self.trascription = audio_processor.transcribe_audio(audio_np) 
                 self.transcription_updated.emit(self.trascription) 
+
+                # if silence_timeout
+                if time.time() - self.last_spoke_time > silence_timeout:
+                    print("Detected silence > 10s, stopping recording...")
+                    self.transcription_updated.emit("Detected silence > 10s, stopping recording...") 
+                    self.stop_recording()
 
         self.record_thread = threading.Thread(target=record)
         self.record_thread.start()
+
         
     def stop_recording(self):
-        self.recording = False
-        self.record_thread.join()
-        self.stream.stop_stream()
-        self.stream.close()
-        self.audio.terminate()
+        self.is_recording = False
+        if self.record_thread is not None:
+            self.record_thread.join()
     
     @staticmethod
-    def get_input_devices():
+    def get_pyaudio_device_info(target_name):
         import pyaudio
         p = pyaudio.PyAudio()
-        devices = []
+        target_name = target_name.lower().strip()
+
         for i in range(p.get_device_count()):
-            device_info = p.get_device_info_by_index(i)
-            if device_info['maxInputChannels'] > 0:
-                devices.append(device_info)
-        return devices
+            info = p.get_device_info_by_index(i)
+            name = info['name'].lower().strip()
+            if target_name in name or name in target_name:
+                info['index'] = i 
+                p.terminate()
+                return info
+        
+        p.terminate()
+        return None
