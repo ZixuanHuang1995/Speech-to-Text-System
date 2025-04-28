@@ -6,6 +6,7 @@ import time
 
 class RecordingManager(QObject):
     transcription_updated = Signal(str)
+    recording_stopped = Signal()
     
     def __init__(self):
         super().__init__()
@@ -40,7 +41,6 @@ class RecordingManager(QObject):
                                       input_device_index = index,
                                       frames_per_buffer=self.frames_per_buffer)
         
-
         def record():
             while self.is_recording:
                 frames = []
@@ -67,11 +67,20 @@ class RecordingManager(QObject):
         self.record_thread = threading.Thread(target=record)
         self.record_thread.start()
 
-        
     def stop_recording(self):
         self.is_recording = False
         if self.record_thread is not None:
-            self.record_thread.join()
+            if threading.current_thread() != self.record_thread:
+                self.record_thread.join()
+        self.record_thread = None
+        if hasattr(self, "stream") and self.stream is not None:
+            self.stream.stop_stream()
+            self.stream.close()
+            self.stream = None
+        if hasattr(self, "audio") and self.audio is not None:
+            self.audio.terminate()
+            self.audio = None
+        self.recording_stopped.emit()
     
     @staticmethod
     def get_pyaudio_device_info(target_name):

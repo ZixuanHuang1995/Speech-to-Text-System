@@ -161,6 +161,7 @@ class MyWidget(QtWidgets.QWidget):
     def record_to_transcribe(self):
 
         self.recording = not self.recording
+        self.recording_manager = RecordingManager()
 
         if self.recording:
             self.model_name = self.buttonModelOption.currentText()
@@ -202,6 +203,7 @@ class MyWidget(QtWidgets.QWidget):
                 self.textStatus.setText("Recording...")
                 self.recording_manager.start_recording(input_device, self.model_name, self.language, record_seconds=3, silence_timeout=silence_timeout)
                 self.recording_manager.transcription_updated.connect(self.append_transcription)
+                self.recording_manager.recording_stopped.connect(self.on_recording_stopped)
             except Exception as e:
                 QMessageBox.critical(self, "Recording Failed", str(e))
         else:
@@ -215,3 +217,7 @@ class MyWidget(QtWidgets.QWidget):
         if self.checkboxAuto.isChecked():
             self.textOutputs.moveCursor(QTextCursor.End)
             self.textOutputs.ensureCursorVisible()
+    
+    @QtCore.Slot()
+    def on_recording_stopped(self):
+        self.textStatus.setText("Recording stopped.")
