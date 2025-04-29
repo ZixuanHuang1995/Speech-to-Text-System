@@ -68,10 +68,13 @@ class RecordingManager(QObject):
         self.record_thread.start()
 
     def stop_recording(self):
+        print("Stopping recording...")
         self.is_recording = False
         if self.record_thread is not None:
+            print("record_thread is not None")
             if threading.current_thread() != self.record_thread:
                 self.record_thread.join()
+                print("Recording thread joined.")
         self.record_thread = None
         if hasattr(self, "stream") and self.stream is not None:
             self.stream.stop_stream()

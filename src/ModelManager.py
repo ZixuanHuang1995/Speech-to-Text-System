@@ -5,19 +5,14 @@ import openvino_genai as ov_genai
 
 class ModelManager:
     
-    def __init__(self):
+    def __init__(self, config):
+        self.config = config
         pass
     
     @staticmethod
-    def get_model_list() -> list:
-        whisper_models = ['base']
-        openvino_whisper_models = [
-            "OpenVINO/whisper-tiny-fp16-ov",
-            "OpenVINO/whisper-base-fp16-ov",
-            "OpenVINO/whisper-medium-fp16-ov", 
-            "OpenVINO/whisper-large-v3-int4-ov",
-            "OpenVINO/whisper-large-v3-fp16-ov"
-        ]
+    def get_model_list(self) -> list:
+        whisper_models = self.config.get("whisper_models")
+        openvino_whisper_models = self.config.get("openvino_whisper_models")
         return openvino_whisper_models + whisper_models
     
     def is_model_available(self, model_name) -> bool:

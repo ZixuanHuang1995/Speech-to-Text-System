@@ -16,8 +16,10 @@ class MyWidget(QtWidgets.QWidget):
     recording = False
     recording_manager = None
 
-    def __init__(self):
+    def __init__(self, config):
         super().__init__()
+
+        self.config = config
 
         self.create_menu()
         self.create_horizontal_group_box()
@@ -37,7 +39,7 @@ class MyWidget(QtWidgets.QWidget):
         main_layout.addWidget(self.textStatus)
         self.setLayout(main_layout)
 
-        self.setWindowTitle("Qt Main Window")
+        self.setWindowTitle(self.config.get("window_title"))
         self.recording_manager = RecordingManager()
 
     def create_menu(self):
@@ -51,14 +53,14 @@ class MyWidget(QtWidgets.QWidget):
         self._horizontal_group_box = QtWidgets.QGroupBox("Basic Components")
         layout = QtWidgets.QHBoxLayout()
         
-        model_manager = ModelManager()
-        self.model_list = model_manager.get_model_list()
+        model_manager = ModelManager(self.config)
+        self.model_list = model_manager.get_model_list(self)
         self.buttonModelOption = QtWidgets.QComboBox()
         self.buttonModelOption.addItems(self.model_list)
         layout.addWidget(self.buttonModelOption)
 
         self.buttonLanguageOption = QtWidgets.QComboBox()
-        self.buttonLanguageOption.addItems(['zh', 'en', 'ja', 'ko'])
+        self.buttonLanguageOption.addItems(self.config.get("language_list"))
         layout.addWidget(self.buttonLanguageOption) 
         
         buttonSelectFile = QtWidgets.QPushButton("Select File")
@@ -104,7 +106,7 @@ class MyWidget(QtWidgets.QWidget):
     
     @QtCore.Slot()
     def download_model(self):
-        model_manager = ModelManager()
+        model_manager = ModelManager(self.config)
         try:
             model_manager.download_model(self.model_list)
             QtWidgets.QMessageBox.warning(None, "Warning", "Models downloaded successfully")
@@ -196,19 +198,19 @@ class MyWidget(QtWidgets.QWidget):
 
             input_device = self.input_device_info
             if self.checkboxDetection.isChecked():
-                silence_timeout = 10
+                silence_timeout = self.config.get('silence_timeout')
             else:
                 silence_timeout = 10000
             try:
                 self.textStatus.setText("Recording...")
-                self.recording_manager.start_recording(input_device, self.model_name, self.language, record_seconds=3, silence_timeout=silence_timeout)
+                self.recording_manager.start_recording(input_device, self.model_name, self.language, record_seconds=self.config.get('record_seconds'), silence_timeout=silence_timeout)
                 self.recording_manager.transcription_updated.connect(self.append_transcription)
                 self.recording_manager.recording_stopped.connect(self.on_recording_stopped)
             except Exception as e:
                 QMessageBox.critical(self, "Recording Failed", str(e))
         else:
             self.recording_manager.stop_recording()
-            self.textStatus.setText("Recording stopped.")
+            self.recording_manager.recording_stopped.connect(self.on_recording_stopped)
 
     def append_transcription(self, text):
         timestamp = datetime.now().strftime('%H:%M:%S')

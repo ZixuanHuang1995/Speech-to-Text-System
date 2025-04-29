@@ -1,0 +1,23 @@
+{
+  "whisper_models": [
+    "base"
+  ],
+  "openvino_whisper_models": [
+    "OpenVINO/whisper-tiny-fp16-ov",
+    "OpenVINO/whisper-base-fp16-ov",
+    "OpenVINO/whisper-medium-fp16-ov",
+    "OpenVINO/whisper-large-v3-int4-ov",
+    "OpenVINO/whisper-large-v3-fp16-ov"
+  ],
+  "language_list": [
+    "zh",
+    "en",
+    "ja",
+    "ko"
+  ],
+  "record_seconds": 3,
+  "silence_timeout": 10,
+  "window_title": "OpenVINO Whisper GUI",
+  "window_size_width": 800,
+  "window_size_high": 600
+}
