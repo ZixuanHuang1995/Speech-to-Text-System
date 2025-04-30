@@ -14,7 +14,6 @@ class MyWidget(QtWidgets.QWidget):
     model_list = None
     model_manager = None
     recording = False
-    recording_manager = None
 
     def __init__(self, config):
         super().__init__()
@@ -163,7 +162,6 @@ class MyWidget(QtWidgets.QWidget):
     def record_to_transcribe(self):
 
         self.recording = not self.recording
-        self.recording_manager = RecordingManager()
 
         if self.recording:
             self.model_name = self.buttonModelOption.currentText()

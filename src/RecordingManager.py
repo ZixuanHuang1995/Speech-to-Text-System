@@ -7,8 +7,16 @@ import time
 class RecordingManager(QObject):
     transcription_updated = Signal(str)
     recording_stopped = Signal()
+    _instance = None # Singleton instance
+
+    def __new__(cls, *args, **kwargs):
+        if cls._instance is None:
+            cls._instance = super(RecordingManager, cls).__new__(cls)
+        return cls._instance
     
     def __init__(self):
+        if hasattr(self, "_initialized") and self._initialized:
+            return  # Prevent re-initialization
         super().__init__()
         self.trascription = ''
         self.is_recording = False
@@ -71,7 +79,6 @@ class RecordingManager(QObject):
         print("Stopping recording...")
         self.is_recording = False
         if self.record_thread is not None:
-            print("record_thread is not None")
             if threading.current_thread() != self.record_thread:
                 self.record_thread.join()
                 print("Recording thread joined.")
