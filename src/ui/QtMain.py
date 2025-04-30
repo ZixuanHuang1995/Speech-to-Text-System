@@ -161,9 +161,7 @@ class MyWidget(QtWidgets.QWidget):
     @QtCore.Slot()
     def record_to_transcribe(self):
 
-        self.recording = not self.recording
-
-        if self.recording:
+        if not self.recording_manager._recording_flag.is_set():
             self.model_name = self.buttonModelOption.currentText()
             self.language = self.buttonLanguageOption.currentText()
             self.input_device_info = None
@@ -202,7 +200,15 @@ class MyWidget(QtWidgets.QWidget):
             try:
                 self.textStatus.setText("Recording...")
                 self.recording_manager.start_recording(input_device, self.model_name, self.language, record_seconds=self.config.get('record_seconds'), silence_timeout=silence_timeout)
+                try:
+                    self.recording_manager.transcription_updated.disconnect(self.append_transcription)
+                except TypeError:
+                    pass
                 self.recording_manager.transcription_updated.connect(self.append_transcription)
+                try:
+                    self.recording_manager.recording_stopped.disconnect(self.on_recording_stopped)
+                except TypeError:
+                    pass
                 self.recording_manager.recording_stopped.connect(self.on_recording_stopped)
             except Exception as e:
                 QMessageBox.critical(self, "Recording Failed", str(e))
