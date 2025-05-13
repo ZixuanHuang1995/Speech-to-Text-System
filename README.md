@@ -10,10 +10,10 @@ This application supports both file-based transcription and real-time microphone
 
 ### Architecture Design 
 The system is organized into four main components:
-1. UI Layer (MyWidget): The graphical user interface implemented using PySide6 (Qt for Python)
-2. Recording Manager: Handles microphone recording with real-time processing
-3. Model Manager: Manages model downloading, storage, and loading
-4. Audio Processor: Processes audio data and performs transcription
+1. UI Layer (MyWidget): The graphical user interface implemented using PySide6 (Qt for Python). 
+2. Recording Manager: Handles microphone recording with real-time processing. 
+3. Model Manager: Manages model downloading, storage, and loading. 
+4. Audio Processor: Processes audio data and performs transcription. 
 
 ### Use Cases 
 1. File Transcription Workflow
