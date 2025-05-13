@@ -1,7 +1,7 @@
 # OpenVINO Whisper GUI
 
 ### Edge Computing for Real-Time Speech Recognition 
-Tech Stack:
+Stacks:
 1. OpenAI’s Whisper model
 2. Intel's OpenVINO toolkit
 3. Qt for Python
