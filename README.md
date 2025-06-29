@@ -1,6 +1,6 @@
-# OpenVINO Whisper GUI
+# Whisper GUI
 
-### Edge Computing for Real-Time Speech Recognition 
+### Accelerated Real-Time Speech Recognition 
 Stacks:
 1. OpenAI’s Whisper model
 2. Intel's OpenVINO toolkit
