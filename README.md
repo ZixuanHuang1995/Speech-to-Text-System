@@ -1,11 +1,6 @@
 # Whisper GUI: A Smarter Way to Transcribe Audio
 
 ### Accelerated Real-Time Speech Recognition 
-Stacks:
-1. OpenAI’s Whisper model
-2. Intel's OpenVINO toolkit
-3. Qt for Python
-
 This application supports both file-based transcription and real-time microphone recording with transcription capabilities. 
 
 ### Use Cases 
@@ -14,6 +9,11 @@ This application supports both file-based transcription and real-time microphone
 
 2. Real-time Recording and Transcription Workflow
 <img width="1399" alt=" Real-time Recording and Transcription Workflow" src="https://github.com/user-attachments/assets/0518bca0-da84-46df-8d9e-bc6fcf7268ee" />
+
+### Stacks
+1. OpenAI’s Whisper model
+2. Intel's OpenVINO toolkit
+3. Qt for Python
 
 ### Architecture Design 
 The system is organized into four main components:
