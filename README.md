@@ -11,6 +11,7 @@ This application supports both file-based transcription and real-time microphone
 <img width="1399" alt=" Real-time Recording and Transcription Workflow" src="https://github.com/user-attachments/assets/0518bca0-da84-46df-8d9e-bc6fcf7268ee" />
 
 ### Stacks
+Technology stack used for speech recognition, optimization, and cross-platform GUI development.
 1. OpenAI’s Whisper model
 2. Intel's OpenVINO toolkit
 3. Qt for Python
